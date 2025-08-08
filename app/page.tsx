@@ -24,13 +24,6 @@ const SHEET_NAME = "Dashboard_Data"
 const RANGE = "A1:J13"
 const UPDATE_INTERVAL = 30 * 1000 // 30 seconds
 
-const defaultConfig = {
-  fontScale: 1,
-  cardScale: 1,
-  paddingScale: 1,
-  maxWidth: 1920,
-}
-
 export default function OperationsDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,20 +31,6 @@ export default function OperationsDashboard() {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [lastSheetRefreshTime, setLastSheetRefreshTime] = useState<string | null>(null)
-  const [displayConfig, setDisplayConfig] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("dashboardDisplayConfig")
-      if (saved) return JSON.parse(saved)
-    }
-    return defaultConfig
-  })
-  const handleConfigChange = (key: keyof typeof defaultConfig, value: number) => {
-    const newConfig = { ...displayConfig, [key]: value }
-    setDisplayConfig(newConfig)
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dashboardDisplayConfig", JSON.stringify(newConfig))
-    }
-  }
 
   // Fetch data from Google Sheets
   const fetchGoogleSheetData = useCallback(async (): Promise<{ data: DashboardData[]; refreshTime: string }> => {
@@ -186,6 +165,7 @@ export default function OperationsDashboard() {
     })
   }
 
+  // Prepare chart data (dummy data for pie chart)
   const getPieChartData = (data: DashboardData[]) => {
     const aggregatedData: { [key: string]: number } = {};
     data.forEach(item => {
@@ -223,61 +203,12 @@ export default function OperationsDashboard() {
     return () => clearInterval(timer)
   }, [])
 
+  // Responsive styles for 55" TV (4K, 3840x2160) -- scale down from previous vw units
+  // We use rem units and max-width wrappers for main content.
+  // The grid is limited to a max-width for ideal TV viewing, with large scalable fonts.
+
   return (
     <div className="min-h-screen w-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white overflow-hidden relative">
-      {/* Display Config Panel */}
-      <div className="fixed top-2 right-2 z-50 bg-gray-900/90 border border-purple-400/30 rounded-xl p-4 shadow-xl flex flex-col gap-3">
-        <div className="font-bold text-purple-300">Display Settings</div>
-        <label className="flex items-center gap-2 text-white">
-          Font Size:
-          <input
-            type="range"
-            min={0.7}
-            max={1.5}
-            step={0.01}
-            value={displayConfig.fontScale}
-            onChange={e => handleConfigChange("fontScale", parseFloat(e.target.value))}
-          />
-          <span className="text-purple-300">{displayConfig.fontScale.toFixed(2)}x</span>
-        </label>
-        <label className="flex items-center gap-2 text-white">
-          Card Size:
-          <input
-            type="range"
-            min={0.7}
-            max={1.3}
-            step={0.01}
-            value={displayConfig.cardScale}
-            onChange={e => handleConfigChange("cardScale", parseFloat(e.target.value))}
-          />
-          <span className="text-purple-300">{displayConfig.cardScale.toFixed(2)}x</span>
-        </label>
-        <label className="flex items-center gap-2 text-white">
-          Padding:
-          <input
-            type="range"
-            min={0.7}
-            max={2}
-            step={0.01}
-            value={displayConfig.paddingScale}
-            onChange={e => handleConfigChange("paddingScale", parseFloat(e.target.value))}
-          />
-          <span className="text-purple-300">{displayConfig.paddingScale.toFixed(2)}x</span>
-        </label>
-        <label className="flex items-center gap-2 text-white">
-          Max Width:
-          <input
-            type="range"
-            min={1400}
-            max={3840}
-            step={10}
-            value={displayConfig.maxWidth}
-            onChange={e => handleConfigChange("maxWidth", parseInt(e.target.value))}
-          />
-          <span className="text-purple-300">{displayConfig.maxWidth}px</span>
-        </label>
-      </div>
-
       {/* Premium Background Pattern */}
       <div className="absolute inset-0 opacity-[0.02] pointer-events-none select-none">
         <div
@@ -373,21 +304,12 @@ export default function OperationsDashboard() {
         </div>
       )}
 
-      {/* Main content: limit width for TV, use scaling from config */}
-      <div
-        className="relative z-10 mx-auto"
-        style={{
-          maxWidth: displayConfig.maxWidth + "px",
-          padding: `${8 * displayConfig.paddingScale}px`,
-        }}
-      >
+      {/* Main content: limit width for TV, use rem units for scaling */}
+      <div className="relative z-10 mx-auto px-8 py-8 space-y-10 w-full" style={{maxWidth: "1920px"}}>
         {/* Premium Header */}
-        <div className="relative w-full mb-10">
+        <div className="relative w-full">
           <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-transparent to-cyan-600/10 rounded-3xl" />
-          <div
-            className="relative bg-gradient-to-r from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-2xl overflow-hidden w-full"
-            style={{ padding: `${32 * displayConfig.paddingScale}px` }}
-          >
+          <div className="relative bg-gradient-to-r from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-3xl border border-purple-500/20 p-8 shadow-2xl overflow-hidden w-full">
             <div
               className="absolute inset-0 rounded-3xl opacity-60"
               style={{
@@ -401,27 +323,13 @@ export default function OperationsDashboard() {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-center w-full gap-8">
-              <div className="flex items-center" style={{ gap: `${32 * displayConfig.paddingScale}px` }}>
+              <div className="flex items-center space-x-8">
                 <div className="relative">
-                  <div
-                    className="rounded-2xl flex items-center justify-center shadow-2xl"
-                    style={{
-                      width: `${128 * displayConfig.cardScale}px`,
-                      height: `${128 * displayConfig.cardScale}px`,
-                      background: "linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)",
-                    }}
-                  >
-                    <Truck style={{ width: `${80 * displayConfig.cardScale}px`, height: `${80 * displayConfig.cardScale}px`, color: "#fff" }} />
+                  <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl">
+                    <Truck className="w-20 h-20 text-white" />
                   </div>
-                  <div
-                    className="absolute -top-2 -right-2 rounded-full animate-pulse shadow-lg flex items-center justify-center"
-                    style={{
-                      width: `${36 * displayConfig.cardScale}px`,
-                      height: `${36 * displayConfig.cardScale}px`,
-                      background: "linear-gradient(90deg, #ef4444 0%, #ec4899 100%)",
-                    }}
-                  >
-                    <Zap style={{ width: `${20 * displayConfig.cardScale}px`, height: `${20 * displayConfig.cardScale}px`, color: "#fff" }} />
+                  <div className="absolute -top-2 -right-2 w-9 h-9 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-pulse shadow-lg flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-white" />
                   </div>
                   <div
                     className="absolute inset-0 rounded-2xl opacity-30"
@@ -433,7 +341,7 @@ export default function OperationsDashboard() {
                   <div
                     className="font-black tracking-wider relative overflow-hidden leading-none"
                     style={{
-                      fontSize: `${112 * displayConfig.fontScale}px`,
+                      fontSize: "7rem", // scale for TV, not too big!
                       backgroundImage: "linear-gradient(110deg, #00BFFF 45%, #FFFFFF 55%, #32CD32 65%, #00BFFF)",
                       backgroundSize: "200% 100%",
                       backgroundClip: "text",
@@ -445,22 +353,17 @@ export default function OperationsDashboard() {
                   >
                     {totalPending(dashboardData).toLocaleString()}
                   </div>
-                  <div
-                    className="text-gray-300 font-bold uppercase tracking-[0.2em]"
-                    style={{ fontSize: `${32 * displayConfig.fontScale}px` }}
-                  >
+                  <div className="text-gray-300 text-3xl font-bold uppercase tracking-[0.2em]">
                     Pending for Dispatch
                   </div>
                 </div>
               </div>
 
               <div className="text-right space-y-3">
-                <div className="font-bold text-white" style={{ fontSize: `${32 * displayConfig.fontScale}px` }}>
-                  {formatDateTime(currentTime)}
-                </div>
+                <div className="text-2xl font-bold text-white">{formatDateTime(currentTime)}</div>
                 <div className="flex items-center justify-end space-x-3 text-gray-300">
-                  <Clock style={{ width: `${24 * displayConfig.fontScale}px`, height: `${24 * displayConfig.fontScale}px`, color: "#06b6d4" }} />
-                  <span style={{ fontSize: `${24 * displayConfig.fontScale}px` }}>
+                  <Clock className="w-5 h-5 text-cyan-400" />
+                  <span className="text-xl">
                     Data Last Update: {lastUpdateTime ? formatTime(lastUpdateTime) : "--:--"}
                   </span>
                   <Button
@@ -499,8 +402,8 @@ export default function OperationsDashboard() {
                   style={{
                     animationDelay: `${index * 100}ms`,
                     animationDuration: "600ms",
-                    minHeight: `${180 * displayConfig.cardScale}px`,
-                    maxHeight: `${300 * displayConfig.cardScale}px`,
+                    minHeight: "11rem",
+                    maxHeight: "18rem"
                   }}
                 >
                   <div
@@ -514,47 +417,32 @@ export default function OperationsDashboard() {
 
                   <div
                     className={cn(
-                      "absolute top-0 left-0 w-full opacity-60",
+                      "absolute top-0 left-0 w-full h-2 opacity-60",
                       status === "red"
                         ? "bg-gradient-to-r from-transparent via-red-400 to-transparent"
                         : "bg-gradient-to-r from-transparent via-green-400 to-transparent",
                     )}
-                    style={{
-                      animation: "data-flow 4s ease-in-out infinite",
-                      height: `${8 * displayConfig.cardScale}px`,
-                    }}
+                    style={{ animation: "data-flow 4s ease-in-out infinite" }}
                   />
 
                   <div
-                    className="relative z-10 space-y-4"
-                    style={{
-                      padding: `${32 * displayConfig.paddingScale}px`,
-                      animation: "card-glow 4s ease-in-out infinite"
-                    }}
+                    className="relative z-10 px-8 py-8 space-y-4"
+                    style={{ animation: "card-glow 4s ease-in-out infinite" }}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center" style={{ gap: `${16 * displayConfig.cardScale}px` }}>
-                        <MapPin style={{ width: `${28 * displayConfig.cardScale}px`, height: `${20 * displayConfig.cardScale}px`, color: "#9ca3af" }} />
-                        <span
-                          className="text-gray-300 uppercase tracking-wider font-bold"
-                          style={{ fontSize: `${32 * displayConfig.fontScale}px` }}
-                        >
-                          {item.region}
-                        </span>
+                      <div className="flex items-center space-x-4">
+                        <MapPin className="w-7 h-7 text-gray-400" />
+                        <span className="text-gray-300 uppercase tracking-wider text-2xl font-bold">{item.region}</span>
                       </div>
                       <div
                         className={cn(
-                          "rounded-xl flex items-center justify-center shadow-lg",
+                          "w-16 h-16 rounded-xl flex items-center justify-center shadow-lg",
                           status === "red"
                             ? "bg-gradient-to-br from-red-500 to-red-600"
                             : "bg-gradient-to-br from-green-500 to-green-600",
                         )}
-                        style={{
-                          width: `${64 * displayConfig.cardScale}px`,
-                          height: `${64 * displayConfig.cardScale}px`,
-                        }}
                       >
-                        <Package style={{ width: `${40 * displayConfig.cardScale}px`, height: `${40 * displayConfig.cardScale}px`, color: "#fff" }} />
+                        <Package className="w-10 h-10 text-white" />
                       </div>
                     </div>
 
@@ -564,14 +452,11 @@ export default function OperationsDashboard() {
                           "tracking-tight font-extrabold",
                           status === "red" ? "text-red-400" : "text-green-400",
                         )}
-                        style={{ fontSize: `${48 * displayConfig.fontScale}px` }}
+                        style={{ fontSize: "3rem" }}
                       >
                         {item.pending.toLocaleString()}
                       </div>
-                      <div
-                        className="text-gray-400 uppercase tracking-[0.15em] font-medium"
-                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-                      >
+                      <div className="text-gray-400 text-lg uppercase tracking-[0.15em] font-medium">
                         PENDING ORDERS
                       </div>
                     </div>
@@ -582,13 +467,7 @@ export default function OperationsDashboard() {
           </div>
           {/* Chart */}
           <div className="md:col-span-4 w-full">
-            <div
-              className="relative h-full bg-gradient-to-br from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-purple-500/20 shadow-2xl overflow-hidden flex flex-col"
-              style={{
-                minHeight: `${320 * displayConfig.cardScale}px`,
-                padding: `${32 * displayConfig.paddingScale}px`
-              }}
-            >
+            <div className="relative h-full bg-gradient-to-br from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-8 shadow-2xl overflow-hidden min-h-[22rem] flex flex-col">
               <div
                 className="absolute inset-0 rounded-2xl opacity-60"
                 style={{
@@ -601,21 +480,15 @@ export default function OperationsDashboard() {
                 }}
               />
               <div className="relative z-10 h-full flex flex-col">
-                <div
-                  className="border-b border-gray-700/50"
-                  style={{ paddingBottom: `${16 * displayConfig.paddingScale}px` }}
-                >
+                <div className="pb-4 border-b border-gray-700/50">
                   <div className="flex items-center space-x-3">
-                    <TrendingUp style={{ width: `${32 * displayConfig.fontScale}px`, height: `${32 * displayConfig.fontScale}px`, color: "#a78bfa" }} />
-                    <span
-                      className="text-white uppercase tracking-wider font-bold font-sans"
-                      style={{ fontSize: `${28 * displayConfig.fontScale}px` }}
-                    >
+                    <TrendingUp className="w-8 h-8 text-purple-400" />
+                    <span className="text-2xl text-white uppercase tracking-wider font-bold font-sans">
                       Ageing Bucket
                     </span>
                   </div>
                 </div>
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center min-h-[15rem]">
                   <ChartContainer
                     config={{
                       value: {
@@ -632,7 +505,7 @@ export default function OperationsDashboard() {
                           dataKey="name"
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: '#aaa', fontSize: 16 * displayConfig.fontScale }}
+                          tick={{ fill: '#aaa', fontSize: 16 }}
                           interval={0}
                           angle={-45}
                           textAnchor="end"
@@ -641,7 +514,7 @@ export default function OperationsDashboard() {
                         <YAxis
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: '#aaa', fontSize: 14 * displayConfig.fontScale }}
+                          tick={{ fill: '#aaa', fontSize: 14 }}
                           domain={[0, 'dataMax']}
                         />
                         <ChartTooltip content={<ChartTooltipContent />} />
@@ -669,7 +542,7 @@ export default function OperationsDashboard() {
         </div>
 
         {/* Premium Data Table */}
-        <div className="relative bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-purple-500/20 shadow-2xl overflow-x-auto w-full mt-10">
+        <div className="relative bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-purple-500/20 shadow-2xl overflow-x-auto w-full">
           <div
             className="absolute inset-0 rounded-2xl opacity-60"
             style={{
@@ -682,40 +555,23 @@ export default function OperationsDashboard() {
             }}
           />
           <div className="relative z-10">
-            <div
-              className="border-b border-gray-700/50"
-              style={{ paddingBottom: `${16 * displayConfig.paddingScale}px` }}
-            >
+            <div className="pb-4 border-b border-gray-700/50">
               <div className="flex items-center space-x-3">
-                <Activity style={{ width: `${32 * displayConfig.fontScale}px`, height: `${32 * displayConfig.fontScale}px`, color: "#06b6d4" }} />
-                <span
-                  className="font-bold text-white uppercase tracking-wider"
-                  style={{ fontSize: `${28 * displayConfig.fontScale}px` }}
-                >
-                  MAIN DRIVERS
-                </span>
+                <Activity className="w-8 h-8 text-cyan-400" />
+                <span className="text-2xl font-bold text-white uppercase tracking-wider">MAIN DRIVERS</span>
               </div>
             </div>
             <div className="overflow-x-auto w-full">
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-700/50 hover:bg-transparent">
-                    <TableHead
-                      className="text-gray-300 font-bold uppercase tracking-wider py-4 text-center"
-                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
-                    >
+                    <TableHead className="text-gray-300 font-bold text-xl uppercase tracking-wider py-4 text-center">
                       Region
                     </TableHead>
-                    <TableHead
-                      className="text-cyan-400 font-extrabold uppercase tracking-wider py-4 text-center"
-                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
-                    >
+                    <TableHead className="text-cyan-400 font-extrabold text-xl uppercase tracking-wider py-4 text-center">
                       Top Contributor
                     </TableHead>
-                    <TableHead
-                      className="text-gray-300 font-bold uppercase tracking-wider py-4 text-center px-10"
-                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
-                    >
+                    <TableHead className="text-gray-300 font-bold text-xl uppercase tracking-wider py-4 text-center px-10">
                       Order Qty
                     </TableHead>
                   </TableRow>
@@ -727,24 +583,11 @@ export default function OperationsDashboard() {
                       className="border-gray-700/30 hover:bg-purple-500/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <TableCell
-                        className="font-extrabold text-white py-4 text-center shadow"
-                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-                      >
-                        {item.region}
-                      </TableCell>
-                      <TableCell
-                        className="text-cyan-300 font-bold py-4 whitespace-normal px-20"
-                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-                      >
+                      <TableCell className="font-extrabold text-white text-xl py-4 text-center shadow">{item.region}</TableCell>
+                      <TableCell className="text-cyan-300 text-xl font-bold py-4 whitespace-normal px-20">
                         {item.topContributor}
                       </TableCell>
-                      <TableCell
-                        className="text-white font-semibold py-4"
-                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-                      >
-                        {item.orderQty.toLocaleString()}
-                      </TableCell>
+                      <TableCell className="text-white text-xl font-semibold py-4">{item.orderQty.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -754,22 +597,14 @@ export default function OperationsDashboard() {
         </div>
 
         {/* Premium Footer */}
-        <div className="flex flex-col md:flex-row justify-between items-center text-gray-400 px-4 w-full mt-10">
+        <div className="flex flex-col md:flex-row justify-between items-center text-gray-400 px-4 w-full">
           <div className="flex items-center space-x-4">
             <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full animate-pulse shadow-lg" />
-            <span
-              className="font-semibold uppercase tracking-wider"
-              style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-            >
+            <span className="text-lg font-semibold uppercase tracking-wider">
               SOC8_Outbound_SOCPacked_Generated_Report - {formatDate(currentTime)}
             </span>
           </div>
-          <div
-            className="font-semibold lowercase tracking-wider"
-            style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
-          >
-            AUTO-REFRESH: ON DATA CHANGE
-          </div>
+          <div className="text-lg font-semibold lowercase tracking-wider">AUTO-REFRESH: ON DATA CHANGE</div>
         </div>
       </div>
     </div>
