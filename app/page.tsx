@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts" // Import PieChart, Pie, Cell, Text, Legend
-import { Truck, Loader2, Package, MapPin, Clock, TrendingUp, Activity, Zap, ArrowRight, RefreshCw } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts"
+import { Truck, Loader2, Package, MapPin, Clock, TrendingUp, Activity, Zap, RefreshCw } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -22,7 +22,14 @@ const API_KEY = "AIzaSyB_hsL7DIB1P7yxxqOVM6sk7Gf2eaX0GLc"
 const GOOGLE_SHEET_ID = "1Dx2UcHhfS8BSBbPbVM_VoY7WEdIjepeGKYK8KFl-OOQ"
 const SHEET_NAME = "Dashboard_Data"
 const RANGE = "A1:J13"
-const UPDATE_INTERVAL = 30 * 1000 // 30 seconds - check for changes more frequently
+const UPDATE_INTERVAL = 30 * 1000 // 30 seconds
+
+const defaultConfig = {
+  fontScale: 1,
+  cardScale: 1,
+  paddingScale: 1,
+  maxWidth: 1920,
+}
 
 export default function OperationsDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData[]>([])
@@ -31,6 +38,20 @@ export default function OperationsDashboard() {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [lastSheetRefreshTime, setLastSheetRefreshTime] = useState<string | null>(null)
+  const [displayConfig, setDisplayConfig] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dashboardDisplayConfig")
+      if (saved) return JSON.parse(saved)
+    }
+    return defaultConfig
+  })
+  const handleConfigChange = (key: keyof typeof defaultConfig, value: number) => {
+    const newConfig = { ...displayConfig, [key]: value }
+    setDisplayConfig(newConfig)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dashboardDisplayConfig", JSON.stringify(newConfig))
+    }
+  }
 
   // Fetch data from Google Sheets
   const fetchGoogleSheetData = useCallback(async (): Promise<{ data: DashboardData[]; refreshTime: string }> => {
@@ -117,7 +138,6 @@ export default function OperationsDashboard() {
     }
   }, [fetchGoogleSheetData, lastSheetRefreshTime])
 
-  // Initial load and periodic updates
   useEffect(() => {
     loadDashboardData()
     const interval = setInterval(loadDashboardData, UPDATE_INTERVAL)
@@ -127,18 +147,6 @@ export default function OperationsDashboard() {
   const getStatusClass = (pending: number) => {
     if (pending < 1500) return "red"
     return "green"
-  }
-
-  const getStatusColor = (pending: number) => {
-    const status = getStatusClass(pending)
-    switch (status) {
-      case "red":
-        return "#FF3366"
-      case "green":
-        return "#00B894"
-      default:
-        return "#7C3AED"
-    }
   }
 
   const totalPending = (dashboardData: DashboardData[]) => dashboardData.reduce((sum, item) => sum + item.pending, 0)
@@ -178,7 +186,6 @@ export default function OperationsDashboard() {
     })
   }
 
-  // Prepare chart data (dummy data for pie chart)
   const getPieChartData = (data: DashboardData[]) => {
     const aggregatedData: { [key: string]: number } = {};
     data.forEach(item => {
@@ -206,12 +213,9 @@ export default function OperationsDashboard() {
   };
 
   const pieChartData = getPieChartData(dashboardData);
-  const totalOrderQty = pieChartData.reduce((sum, entry) => sum + entry.value, 0);
 
-  // Sort dashboard data by pending orders (highest to lowest)
   const sortedDashboardData = [...dashboardData].sort((a, b) => b.pending - a.pending)
 
-  // Update current time every second
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date())
@@ -221,6 +225,59 @@ export default function OperationsDashboard() {
 
   return (
     <div className="min-h-screen w-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white overflow-hidden relative">
+      {/* Display Config Panel */}
+      <div className="fixed top-2 right-2 z-50 bg-gray-900/90 border border-purple-400/30 rounded-xl p-4 shadow-xl flex flex-col gap-3">
+        <div className="font-bold text-purple-300">Display Settings</div>
+        <label className="flex items-center gap-2 text-white">
+          Font Size:
+          <input
+            type="range"
+            min={0.7}
+            max={1.5}
+            step={0.01}
+            value={displayConfig.fontScale}
+            onChange={e => handleConfigChange("fontScale", parseFloat(e.target.value))}
+          />
+          <span className="text-purple-300">{displayConfig.fontScale.toFixed(2)}x</span>
+        </label>
+        <label className="flex items-center gap-2 text-white">
+          Card Size:
+          <input
+            type="range"
+            min={0.7}
+            max={1.3}
+            step={0.01}
+            value={displayConfig.cardScale}
+            onChange={e => handleConfigChange("cardScale", parseFloat(e.target.value))}
+          />
+          <span className="text-purple-300">{displayConfig.cardScale.toFixed(2)}x</span>
+        </label>
+        <label className="flex items-center gap-2 text-white">
+          Padding:
+          <input
+            type="range"
+            min={0.7}
+            max={2}
+            step={0.01}
+            value={displayConfig.paddingScale}
+            onChange={e => handleConfigChange("paddingScale", parseFloat(e.target.value))}
+          />
+          <span className="text-purple-300">{displayConfig.paddingScale.toFixed(2)}x</span>
+        </label>
+        <label className="flex items-center gap-2 text-white">
+          Max Width:
+          <input
+            type="range"
+            min={1400}
+            max={3840}
+            step={10}
+            value={displayConfig.maxWidth}
+            onChange={e => handleConfigChange("maxWidth", parseInt(e.target.value))}
+          />
+          <span className="text-purple-300">{displayConfig.maxWidth}px</span>
+        </label>
+      </div>
+
       {/* Premium Background Pattern */}
       <div className="absolute inset-0 opacity-[0.02] pointer-events-none select-none">
         <div
@@ -243,7 +300,7 @@ export default function OperationsDashboard() {
             linear-gradient(rgba(124, 58, 237, 0.3) 1px, transparent 1px),
             linear-gradient(90deg, rgba(124, 58, 237, 0.3) 1px, transparent 1px)
           `,
-          backgroundSize: "6vw 6vw",
+          backgroundSize: "60px 60px",
           animation: "grid-move 20s linear infinite",
         }}
       />
@@ -251,11 +308,11 @@ export default function OperationsDashboard() {
       <style jsx>{`
         @keyframes grid-move {
           0% { transform: translate(0, 0); }
-          100% { transform: translate(6vw, 6vw); }
+          100% { transform: translate(60px, 60px); }
         }
         @keyframes glow-pulse {
-          0%, 100% { box-shadow: 0 0 2vw rgba(124, 58, 237, 0.5); }
-          50% { box-shadow: 0 0 4vw rgba(124, 58, 237, 0.8), 0 0 6vw rgba(0, 217, 255, 0.3); }
+          0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.5); }
+          50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.8), 0 0 60px rgba(0, 217, 255, 0.3); }
         }
         @keyframes data-flow {
           0% { transform: translateX(-100%); opacity: 0; }
@@ -266,56 +323,35 @@ export default function OperationsDashboard() {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
-        @keyframes border-rotate {
-          0% {
-            background: linear-gradient(0deg, transparent 20%, rgba(124, 58, 237, 0.8) 40%, rgba(124, 58, 237, 0.8) 60%, transparent 70%, rgba(0, 217, 255, 0.6) 85%, transparent 100%);
-          }
-          25% {
-            background: linear-gradient(90deg, transparent 20%, rgba(124, 58, 237, 0.8) 40%, rgba(124, 58, 237, 0.8) 60%, transparent 70%, rgba(0, 217, 255, 0.6) 85%, transparent 100%);
-          }
-          50% {
-            background: linear-gradient(180deg, transparent 20%, rgba(124, 58, 237, 0.8) 40%, rgba(124, 58, 237, 0.8) 60%, transparent 70%, rgba(0, 217, 255, 0.6) 85%, transparent 100%);
-          }
-          75% {
-            background: linear-gradient(270deg, transparent 20%, rgba(124, 58, 237, 0.8) 40%, rgba(124, 58, 237, 0.8) 60%, transparent 70%, rgba(0, 217, 255, 0.6) 85%, transparent 100%);
-          }
-          100% {
-            background: linear-gradient(360deg, transparent 20%, rgba(124, 58, 237, 0.8) 40%, rgba(124, 58, 237, 0.8) 60%, transparent 70%, rgba(0, 217, 255, 0.6) 85%, transparent 100%);
-          }
-        }
-        @keyframes card-glow {
-          0%, 100% { box-shadow: 0 0 1vw rgba(124, 58, 237, 0.3), 0 0 2vw rgba(0, 217, 255, 0.1); }
-          50% { box-shadow: 0 0 2vw rgba(124, 58, 237, 0.6), 0 0 4vw rgba(0, 217, 255, 0.2); }
-        }
         @keyframes border-pulse {
           0%, 100% {
-            box-shadow: 0 0 0.5vw rgba(124, 58, 237, 0.7), 0 0 1vw rgba(0, 217, 255, 0.3);
+            box-shadow: 0 0 5px rgba(124, 58, 237, 0.7), 0 0 10px rgba(0, 217, 255, 0.3);
             opacity: 0.8;
           }
           50% {
-            box-shadow: 0 0 2.5vw rgba(124, 58, 237, 1), 0 0 5vw rgba(0, 217, 255, 0.6);
+            box-shadow: 0 0 25px rgba(124, 58, 237, 1), 0 0 50px rgba(0, 217, 255, 0.6);
             opacity: 1;
           }
         }
-        @keyframes row-fade-in {
-          0% { opacity: 0; transform: translateY(1vw); }
-          100% { opacity: 1; transform: translateY(0); }
+        @keyframes card-glow {
+          0%, 100% { box-shadow: 0 0 10px rgba(124, 58, 237, 0.3), 0 0 20px rgba(0, 217, 255, 0.1); }
+          50% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.6), 0 0 40px rgba(0, 217, 255, 0.2); }
         }
       `}</style>
 
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-950/95 backdrop-blur-xl z-50 text-center">
-          <div className="text-center space-y-8 p-[4vw] rounded-[3vw] bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl border border-purple-500/20 shadow-2xl">
+          <div className="text-center space-y-8 p-16 rounded-3xl bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl border border-purple-500/20 shadow-2xl">
             <div className="relative">
-              <Loader2 className="w-[6vw] h-[6vw] animate-spin mx-auto text-purple-400" />
-              <div className="absolute inset-0 w-[6vw] h-[6vw] mx-auto rounded-full border-2 border-cyan-400/30 animate-ping" />
+              <Loader2 className="w-24 h-24 animate-spin mx-auto text-purple-400" />
+              <div className="absolute inset-0 w-24 h-24 mx-auto rounded-full border-2 border-cyan-400/30 animate-ping" />
             </div>
             <div className="space-y-3">
-              <div className="text-[2vw] font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
                 INITIALIZING DASHBOARD
               </div>
-              <div className="text-gray-400 text-[1.5vw]">Connecting to data streams...</div>
+              <div className="text-gray-400 text-xl">Connecting to data streams...</div>
             </div>
           </div>
         </div>
@@ -323,7 +359,7 @@ export default function OperationsDashboard() {
 
       {error && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="max-w-md w-full p-10 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white rounded-2xl shadow-2xl border border-white/10 text-center space-y-6 animate-fade-[...]">
+          <div className="max-w-md w-full p-10 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 text-white rounded-2xl shadow-2xl border border-white/10 text-center space-y-6">
             <div className="flex flex-col items-center space-y-4">
               <svg className="w-12 h-12 text-indigo-300 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -337,13 +373,23 @@ export default function OperationsDashboard() {
         </div>
       )}
 
-      <div className="relative z-10 px-[2vw] py-[2vh] space-y-[3vw] w-full h-full">
+      {/* Main content: limit width for TV, use scaling from config */}
+      <div
+        className="relative z-10 mx-auto"
+        style={{
+          maxWidth: displayConfig.maxWidth + "px",
+          padding: `${8 * displayConfig.paddingScale}px`,
+        }}
+      >
         {/* Premium Header */}
-        <div className="relative w-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-transparent to-cyan-600/10 rounded-[3vw]" />
-          <div className="relative bg-gradient-to-r from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-[3vw] border border-purple-500/20 px-[2vw] py-[2vh] shadow-2xl overflow-hidden w-full">
+        <div className="relative w-full mb-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-transparent to-cyan-600/10 rounded-3xl" />
+          <div
+            className="relative bg-gradient-to-r from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-3xl border border-purple-500/20 shadow-2xl overflow-hidden w-full"
+            style={{ padding: `${32 * displayConfig.paddingScale}px` }}
+          >
             <div
-              className="absolute inset-0 rounded-[3vw] opacity-60"
+              className="absolute inset-0 rounded-3xl opacity-60"
               style={{
                 animation: "border-pulse 5s ease-in-out infinite alternate",
                 mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -354,17 +400,31 @@ export default function OperationsDashboard() {
               }}
             />
 
-            <div className="flex flex-col md:flex-row justify-between items-center w-full gap-[3vw]">
-              <div className="flex items-center space-x-[3vw]">
+            <div className="flex flex-col md:flex-row justify-between items-center w-full gap-8">
+              <div className="flex items-center" style={{ gap: `${32 * displayConfig.paddingScale}px` }}>
                 <div className="relative">
-                  <div className="w-[8vw] h-[8vw] bg-gradient-to-br from-purple-500 to-cyan-500 rounded-[2vw] flex items-center justify-center shadow-2xl">
-                    <Truck className="w-[5vw] h-[5vw] text-white" />
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-[2vw] h-[2vw] bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-pulse shadow-lg flex items-center justify-center">
-                    <Zap className="w-[1vw] h-[1vw] text-white" />
+                  <div
+                    className="rounded-2xl flex items-center justify-center shadow-2xl"
+                    style={{
+                      width: `${128 * displayConfig.cardScale}px`,
+                      height: `${128 * displayConfig.cardScale}px`,
+                      background: "linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%)",
+                    }}
+                  >
+                    <Truck style={{ width: `${80 * displayConfig.cardScale}px`, height: `${80 * displayConfig.cardScale}px`, color: "#fff" }} />
                   </div>
                   <div
-                    className="absolute inset-0 rounded-[2vw] opacity-30"
+                    className="absolute -top-2 -right-2 rounded-full animate-pulse shadow-lg flex items-center justify-center"
+                    style={{
+                      width: `${36 * displayConfig.cardScale}px`,
+                      height: `${36 * displayConfig.cardScale}px`,
+                      background: "linear-gradient(90deg, #ef4444 0%, #ec4899 100%)",
+                    }}
+                  >
+                    <Zap style={{ width: `${20 * displayConfig.cardScale}px`, height: `${20 * displayConfig.cardScale}px`, color: "#fff" }} />
+                  </div>
+                  <div
+                    className="absolute inset-0 rounded-2xl opacity-30"
                     style={{ animation: "glow-pulse 6s ease-in-out infinite" }}
                   />
                 </div>
@@ -373,26 +433,34 @@ export default function OperationsDashboard() {
                   <div
                     className="font-black tracking-wider relative overflow-hidden leading-none"
                     style={{
-                      fontSize: "10vw",
+                      fontSize: `${112 * displayConfig.fontScale}px`,
                       backgroundImage: "linear-gradient(110deg, #00BFFF 45%, #FFFFFF 55%, #32CD32 65%, #00BFFF)",
                       backgroundSize: "200% 100%",
                       backgroundClip: "text",
                       WebkitBackgroundClip: "text",
                       color: "transparent",
                       animation: "shimmer 5s linear infinite",
+                      lineHeight: 1,
                     }}
                   >
                     {totalPending(dashboardData).toLocaleString()}
                   </div>
-                  <div className="text-gray-300 text-[2vw] font-bold uppercase tracking-[0.2em]">Pending for Dispatch</div>
+                  <div
+                    className="text-gray-300 font-bold uppercase tracking-[0.2em]"
+                    style={{ fontSize: `${32 * displayConfig.fontScale}px` }}
+                  >
+                    Pending for Dispatch
+                  </div>
                 </div>
               </div>
 
               <div className="text-right space-y-3">
-                <div className="text-[2vw] font-bold text-white">{formatDateTime(currentTime)}</div>
+                <div className="font-bold text-white" style={{ fontSize: `${32 * displayConfig.fontScale}px` }}>
+                  {formatDateTime(currentTime)}
+                </div>
                 <div className="flex items-center justify-end space-x-3 text-gray-300">
-                  <Clock className="w-5 h-5 text-cyan-400" />
-                  <span className="text-lg">
+                  <Clock style={{ width: `${24 * displayConfig.fontScale}px`, height: `${24 * displayConfig.fontScale}px`, color: "#06b6d4" }} />
+                  <span style={{ fontSize: `${24 * displayConfig.fontScale}px` }}>
                     Data Last Update: {lastUpdateTime ? formatTime(lastUpdateTime) : "--:--"}
                   </span>
                   <Button
@@ -412,16 +480,16 @@ export default function OperationsDashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-[2vw] gap-y-[2vw] w-full overflow-x-auto">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-8 w-full overflow-x-hidden">
           {/* Scorecards */}
-          <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-[2vw] gap-y-[2vw] w-full">
+          <div className="md:col-span-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-8 w-full">
             {sortedDashboardData.slice(0, 6).map((item, index) => {
               const status = getStatusClass(item.pending)
               return (
                 <div
                   key={index}
                   className={cn(
-                    "group relative overflow-hidden rounded-[2vw] transition-all duration-700 hover:scale-105 animate-in slide-in-from-bottom-4 fade-in",
+                    "group relative overflow-hidden rounded-2xl transition-all duration-700 hover:scale-105 animate-in slide-in-from-bottom-4 fade-in",
                     "bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl",
                     "border shadow-2xl hover:shadow-purple-500/20",
                     status === "red"
@@ -431,7 +499,8 @@ export default function OperationsDashboard() {
                   style={{
                     animationDelay: `${index * 100}ms`,
                     animationDuration: "600ms",
-                    minHeight: "18vw",
+                    minHeight: `${180 * displayConfig.cardScale}px`,
+                    maxHeight: `${300 * displayConfig.cardScale}px`,
                   }}
                 >
                   <div
@@ -445,32 +514,47 @@ export default function OperationsDashboard() {
 
                   <div
                     className={cn(
-                      "absolute top-0 left-0 w-full h-[0.5vw] opacity-60",
+                      "absolute top-0 left-0 w-full opacity-60",
                       status === "red"
                         ? "bg-gradient-to-r from-transparent via-red-400 to-transparent"
                         : "bg-gradient-to-r from-transparent via-green-400 to-transparent",
                     )}
-                    style={{ animation: "data-flow 4s ease-in-out infinite" }}
+                    style={{
+                      animation: "data-flow 4s ease-in-out infinite",
+                      height: `${8 * displayConfig.cardScale}px`,
+                    }}
                   />
 
                   <div
-                    className="relative z-10 px-[2vw] py-[2vw] space-y-4"
-                    style={{ animation: "card-glow 4s ease-in-out infinite" }}
+                    className="relative z-10 space-y-4"
+                    style={{
+                      padding: `${32 * displayConfig.paddingScale}px`,
+                      animation: "card-glow 4s ease-in-out infinite"
+                    }}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <MapPin className="w-5 h-3 text-gray-400" />
-                        <span className="text-gray-300 uppercase tracking-wider text-[2vw] font-bold">{item.region}</span>
+                      <div className="flex items-center" style={{ gap: `${16 * displayConfig.cardScale}px` }}>
+                        <MapPin style={{ width: `${28 * displayConfig.cardScale}px`, height: `${20 * displayConfig.cardScale}px`, color: "#9ca3af" }} />
+                        <span
+                          className="text-gray-300 uppercase tracking-wider font-bold"
+                          style={{ fontSize: `${32 * displayConfig.fontScale}px` }}
+                        >
+                          {item.region}
+                        </span>
                       </div>
                       <div
                         className={cn(
-                          "w-[3vw] h-[3vw] rounded-xl flex items-center justify-center shadow-lg",
+                          "rounded-xl flex items-center justify-center shadow-lg",
                           status === "red"
                             ? "bg-gradient-to-br from-red-500 to-red-600"
                             : "bg-gradient-to-br from-green-500 to-green-600",
                         )}
+                        style={{
+                          width: `${64 * displayConfig.cardScale}px`,
+                          height: `${64 * displayConfig.cardScale}px`,
+                        }}
                       >
-                        <Package className="w-[2vw] h-[2vw] text-white" />
+                        <Package style={{ width: `${40 * displayConfig.cardScale}px`, height: `${40 * displayConfig.cardScale}px`, color: "#fff" }} />
                       </div>
                     </div>
 
@@ -480,11 +564,14 @@ export default function OperationsDashboard() {
                           "tracking-tight font-extrabold",
                           status === "red" ? "text-red-400" : "text-green-400",
                         )}
-                        style={{ fontSize: "4vw" }}
+                        style={{ fontSize: `${48 * displayConfig.fontScale}px` }}
                       >
                         {item.pending.toLocaleString()}
                       </div>
-                      <div className="text-gray-400 text-[1vw] uppercase tracking-[0.15em] font-medium">
+                      <div
+                        className="text-gray-400 uppercase tracking-[0.15em] font-medium"
+                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+                      >
                         PENDING ORDERS
                       </div>
                     </div>
@@ -493,12 +580,17 @@ export default function OperationsDashboard() {
               )
             })}
           </div>
-
           {/* Chart */}
           <div className="md:col-span-4 w-full">
-            <div className="relative h-full bg-gradient-to-br from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-[2vw] border border-purple-500/20 px-[2vw] py-[2vw] shadow-2xl overflow-hidden min-h-[22vw] flex flex-col">
+            <div
+              className="relative h-full bg-gradient-to-br from-gray-900/60 to-slate-900/60 backdrop-blur-xl rounded-2xl border border-purple-500/20 shadow-2xl overflow-hidden flex flex-col"
+              style={{
+                minHeight: `${320 * displayConfig.cardScale}px`,
+                padding: `${32 * displayConfig.paddingScale}px`
+              }}
+            >
               <div
-                className="absolute inset-0 rounded-[2vw] opacity-60"
+                className="absolute inset-0 rounded-2xl opacity-60"
                 style={{
                   animation: "border-pulse 4s ease-in-out infinite alternate",
                   mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -509,15 +601,21 @@ export default function OperationsDashboard() {
                 }}
               />
               <div className="relative z-10 h-full flex flex-col">
-                <div className="pb-[1vw] border-b border-gray-700/50">
+                <div
+                  className="border-b border-gray-700/50"
+                  style={{ paddingBottom: `${16 * displayConfig.paddingScale}px` }}
+                >
                   <div className="flex items-center space-x-3">
-                    <TrendingUp className="w-6 h-6 text-purple-400" />
-                    <span className="text-[1.5vw] text-white uppercase tracking-wider font-bold font-sans">
+                    <TrendingUp style={{ width: `${32 * displayConfig.fontScale}px`, height: `${32 * displayConfig.fontScale}px`, color: "#a78bfa" }} />
+                    <span
+                      className="text-white uppercase tracking-wider font-bold font-sans"
+                      style={{ fontSize: `${28 * displayConfig.fontScale}px` }}
+                    >
                       Ageing Bucket
                     </span>
                   </div>
                 </div>
-                <div className="flex-1 flex items-center justify-center min-h-[15vw]">
+                <div className="flex-1 flex items-center justify-center">
                   <ChartContainer
                     config={{
                       value: {
@@ -534,7 +632,7 @@ export default function OperationsDashboard() {
                           dataKey="name"
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: '#aaa', fontSize: 16 }}
+                          tick={{ fill: '#aaa', fontSize: 16 * displayConfig.fontScale }}
                           interval={0}
                           angle={-45}
                           textAnchor="end"
@@ -543,7 +641,7 @@ export default function OperationsDashboard() {
                         <YAxis
                           tickLine={false}
                           axisLine={false}
-                          tick={{ fill: '#aaa', fontSize: 14 }}
+                          tick={{ fill: '#aaa', fontSize: 14 * displayConfig.fontScale }}
                           domain={[0, 'dataMax']}
                         />
                         <ChartTooltip content={<ChartTooltipContent />} />
@@ -571,9 +669,9 @@ export default function OperationsDashboard() {
         </div>
 
         {/* Premium Data Table */}
-        <div className="relative bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl rounded-[2vw] border border-purple-500/20 shadow-2xl overflow-x-auto w-full">
+        <div className="relative bg-gradient-to-br from-gray-900/80 to-slate-900/80 backdrop-blur-xl rounded-2xl border border-purple-500/20 shadow-2xl overflow-x-auto w-full mt-10">
           <div
-            className="absolute inset-0 rounded-[2vw] opacity-60"
+            className="absolute inset-0 rounded-2xl opacity-60"
             style={{
               animation: "border-pulse 4s ease-in-out infinite alternate",
               mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -584,23 +682,40 @@ export default function OperationsDashboard() {
             }}
           />
           <div className="relative z-10">
-            <div className="pb-[1vw] border-b border-gray-700/50">
+            <div
+              className="border-b border-gray-700/50"
+              style={{ paddingBottom: `${16 * displayConfig.paddingScale}px` }}
+            >
               <div className="flex items-center space-x-3">
-                <Activity className="w-6 h-6 text-cyan-400" />
-                <span className="text-[1.5vw] font-bold text-white uppercase tracking-wider">MAIN DRIVERS</span>
+                <Activity style={{ width: `${32 * displayConfig.fontScale}px`, height: `${32 * displayConfig.fontScale}px`, color: "#06b6d4" }} />
+                <span
+                  className="font-bold text-white uppercase tracking-wider"
+                  style={{ fontSize: `${28 * displayConfig.fontScale}px` }}
+                >
+                  MAIN DRIVERS
+                </span>
               </div>
             </div>
             <div className="overflow-x-auto w-full">
               <Table>
                 <TableHeader>
                   <TableRow className="border-gray-700/50 hover:bg-transparent">
-                    <TableHead className="text-gray-300 font-bold text-[1.3vw] uppercase tracking-wider py-[1vw] text-center">
+                    <TableHead
+                      className="text-gray-300 font-bold uppercase tracking-wider py-4 text-center"
+                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
+                    >
                       Region
                     </TableHead>
-                    <TableHead className="text-cyan-400 font-extrabold text-[1.3vw] uppercase tracking-wider py-[1vw] text-center">
+                    <TableHead
+                      className="text-cyan-400 font-extrabold uppercase tracking-wider py-4 text-center"
+                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
+                    >
                       Top Contributor
                     </TableHead>
-                    <TableHead className="text-gray-300 font-bold text-[1.3vw] uppercase tracking-wider py-[1vw] text-center px-10">
+                    <TableHead
+                      className="text-gray-300 font-bold uppercase tracking-wider py-4 text-center px-10"
+                      style={{ fontSize: `${22 * displayConfig.fontScale}px` }}
+                    >
                       Order Qty
                     </TableHead>
                   </TableRow>
@@ -612,11 +727,24 @@ export default function OperationsDashboard() {
                       className="border-gray-700/30 hover:bg-purple-500/5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <TableCell className="font-extrabold text-white text-[1.2vw] py-[1vw] text-center shadow">{item.region}</TableCell>
-                      <TableCell className="text-cyan-300 text-[1.2vw] font-bold py-[1vw] whitespace-normal px-20">
+                      <TableCell
+                        className="font-extrabold text-white py-4 text-center shadow"
+                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+                      >
+                        {item.region}
+                      </TableCell>
+                      <TableCell
+                        className="text-cyan-300 font-bold py-4 whitespace-normal px-20"
+                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+                      >
                         {item.topContributor}
                       </TableCell>
-                      <TableCell className="text-white text-[1.2vw] font-semibold py-[1vw]">{item.orderQty.toLocaleString()}</TableCell>
+                      <TableCell
+                        className="text-white font-semibold py-4"
+                        style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+                      >
+                        {item.orderQty.toLocaleString()}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -626,14 +754,22 @@ export default function OperationsDashboard() {
         </div>
 
         {/* Premium Footer */}
-        <div className="flex flex-col md:flex-row justify-between items-center text-gray-400 px-4 w-full">
+        <div className="flex flex-col md:flex-row justify-between items-center text-gray-400 px-4 w-full mt-10">
           <div className="flex items-center space-x-4">
             <div className="w-3 h-3 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full animate-pulse shadow-lg" />
-            <span className="text-[1vw] font-semibold uppercase tracking-wider">
+            <span
+              className="font-semibold uppercase tracking-wider"
+              style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+            >
               SOC8_Outbound_SOCPacked_Generated_Report - {formatDate(currentTime)}
             </span>
           </div>
-          <div className="text-[1vw] font-semibold lowercase tracking-wider">AUTO-REFRESH: ON DATA CHANGE</div>
+          <div
+            className="font-semibold lowercase tracking-wider"
+            style={{ fontSize: `${20 * displayConfig.fontScale}px` }}
+          >
+            AUTO-REFRESH: ON DATA CHANGE
+          </div>
         </div>
       </div>
     </div>
