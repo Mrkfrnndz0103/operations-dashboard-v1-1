@@ -124,8 +124,8 @@ export default function OperationsDashboard() {
   }, [loadDashboardData])
 
   const getStatusClass = (pending: number) => {
-    if (pending < 1500) return "red"
-    return "green"
+    if (pending < 1500) return "green"
+    return "red"
   }
 
   const totalPending = (dashboardData: DashboardData[]) => dashboardData.reduce((sum, item) => sum + item.pending, 0)
