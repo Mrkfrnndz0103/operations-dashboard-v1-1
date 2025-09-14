@@ -458,10 +458,13 @@ export default function OperationsDashboard() {
                       </div>
                       <div className="text-gray-400 text-lg uppercase tracking-[0.15em] font-medium">
                         PENDING ORDERS
+                        <div className="text-gray-300 text-base font-medium pt-1">
+                          <span className="text-cyan-400">Top Contributor:</span>
+                          <br />
+                          <span className="text-white font-semibold">
+                      {item.topContributor} - {item.orderQty.toLocaleString()}</span>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
               )
             })}
           </div>
