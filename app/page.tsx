@@ -462,9 +462,13 @@ export default function OperationsDashboard() {
                           <span className="text-cyan-400">Top Contributor:</span>
                           <br />
                           <span className="text-white font-semibold">
-                      {item.topContributor} - {item.orderQty.toLocaleString()}</span>
+                            {item.topContributor} - {item.orderQty.toLocaleString()}
+                          </span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
               )
             })}
           </div>
