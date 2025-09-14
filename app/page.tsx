@@ -192,13 +192,6 @@ export default function OperationsDashboard() {
     return () => clearInterval(timer)
   }, [])
 
-  return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 text-white overflow-hidden relative">
-      {/* UI code remains unchanged */}
-    </div>
-  )
-}
-
   // Responsive styles for 55" TV (4K, 3840x2160) -- scale down from previous vw units
   // We use rem units and max-width wrappers for main content.
   // The grid is limited to a max-width for ideal TV viewing, with large scalable fonts.
